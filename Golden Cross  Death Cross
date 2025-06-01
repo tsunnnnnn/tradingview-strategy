@@ -1,0 +1,42 @@
+//@version=5
+strategy("Golden Cross / Death Cross Strategy", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+
+
+shortEMA = ta.ema(close, 9)   // Short EMA (fast)
+longEMA = ta.ema(close, 21)   // Long EMA (slow)
+
+
+longCondition = ta.crossover(shortEMA, longEMA)  // Golden Cross (Buy signal)
+shortCondition = ta.crossunder(shortEMA, longEMA)  // Death Cross (Sell signal)
+
+
+stopLossMultiplier = 1.5  // SL distance factor (optimized for risk management)
+profitTargets = array.new_float(3)
+array.set(profitTargets, 0, 1.5)  // Increased RRR
+array.set(profitTargets, 1, 2.5)
+array.set(profitTargets, 2, 4.0)
+
+
+atrValue = ta.atr(14)
+longSL = close - (atrValue * stopLossMultiplier)
+shortSL = close + (atrValue * stopLossMultiplier)
+
+
+volFilter = ta.sma(volume, 20) > ta.sma(volume, 50)  // Ensures market momentum before entry
+
+
+if longCondition and volFilter
+    strategy.entry("Long", strategy.long)
+    strategy.exit("TP #1", from_entry="Long", limit=close + (atrValue * array.get(profitTargets, 0)), stop=longSL)
+    strategy.exit("TP #2", from_entry="Long", limit=close + (atrValue * array.get(profitTargets, 1)))
+    strategy.exit("TP #3", from_entry="Long", limit=close + (atrValue * array.get(profitTargets, 2)))
+
+
+    strategy.entry("Short", strategy.short)
+    strategy.exit("TP #1", from_entry="Short", limit=close - (atrValue * array.get(profitTargets, 0)), stop=shortSL)
+    strategy.exit("TP #2", from_entry="Short", limit=close - (atrValue * array.get(profitTargets, 1)))
+    strategy.exit("TP #3", from_entry="Short", limit=close - (atrValue * array.get(profitTargets, 2)))
+
+
+plot(shortEMA, color=color.blue, title="9 EMA")
+plot(longEMA, color=color.red, title="21 EMA")
